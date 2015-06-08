@@ -85,31 +85,69 @@ public:
     //cv::destroyWindow(OPENCV_WINDOW);w
   }
 
-  void imageCb(const sensor_msgs::ImageConstPtr& msg)
-  {
-    cv_bridge::CvImagePtr cv_ptr;
-    try
-    {
-      cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
-    }
-    catch (cv_bridge::Exception& e)
-    {
-      ROS_ERROR("cv_bridge exception: %s", e.what());
-      return;
-    }
+  Point circleDetection(Mat src){
+  	Mat src_gray;
+ 		// Convert it to gray
+  	cvtColor( src, src_gray, CV_BGR2GRAY );
+  	
+  	/// Reduce the noise so we avoid false circle detection
+  	GaussianBlur( src_gray, src_gray, Size(9, 9), 2, 2 );
+  	
+  	std::vector<Vec3f> circles;
+  	
+  	/// Apply the Hough Transform to find the circles
+  	HoughCircles( src_gray, circles, CV_HOUGH_GRADIENT, 1, src_gray.rows/100, 20, 140, 0, 0 );
+  	
+  	// std
+  	//HoughCircles( src_gray, circles, CV_HOUGH_GRADIENT, 1, src_gray.rows/8, 200, 100, 0, 0 );
+  	
+  	/// Draw the circles detected
+  	int sum_x = 0;
+  	int sum_y = 0;
+  	int numbOfcircles = 0;
+  	
+  	for( size_t i = 0; i < circles.size(); i++ )
+  	{
+  	    //Point center(cvRound(circles[i][0]), cvRound(circles[i][1]));
+  	    int radius = cvRound(circles[i][2]);
+  	    
+  	    for(int j = 0; j < circles.size();j++) {
+  	        if (j==i){
+  	            continue;
+  	        }
+  	        int x = circles[i][0];
+  	        int dx = circles[j][0];
+  	        int y = circles[i][1];
+  	        int dy = circles[j][1];
+  	        
+  	        if (sqrt(abs(x-dx)*abs(x-dx) + abs(y-dy)*abs(y-dy)) < 15) {
+  	            if(abs(cvRound(circles[i][2]-circles[j][2])) > 5 ){
+  	                numbOfcircles++;
+  	                sum_x += circles[i][0];
+  	                sum_y += circles[i][1];
+  	            }
+  	        }
+  	    }
+  	    // draw circles (average)
+  	    if (numbOfcircles > 0) {
+  	        // circle center
+  	        Point center(sum_x/numbOfcircles, sum_y/numbOfcircles);
+  	        //circle( src, center, 3, Scalar(0,255,0), -1, 8, 0 );
+  	        // circle outline
+  	        // circle( src, center, radius, Scalar(0,0,255), 3, 8, 0 );
+  	        return center;
+  	    }
+  	    
+  	}		
+  }
 
-    // Draw an example circle on the video stream
-    //if (cv_ptr->image.rows > 60 && cv_ptr->image.cols > 60)
-    //  cv::circle(cv_ptr->image, cv::Point(50, 50), 10, CV_RGB(255,0,0));
-    Mat src, src_gray;
-
-    //TEST AF BLOB DETECTION
+  Point blobDetection(Mat src){
+  	Mat src_gray;
+  	//TEST AF BLOB DETECTION
     int fontface = cv::FONT_HERSHEY_SIMPLEX;
     double scale = 0.4;
     int thickness = 1;
     int baseline = 0;
-    src = cv_ptr->image;
-    cv::flip(src,src,1);
 
    // Set up the detector with default parameters.
     SimpleBlobDetector detector;
@@ -133,10 +171,33 @@ public:
       cv::Size siz = cv::getTextSize(tekst, fontface, scale, thickness, &baseline);
       cv::Point2f pt(keypoints[0].pt.x - (siz.width / 2), keypoints[0].pt.y - siz.height*2);
       cv::putText(im_with_keypoints, tekst, pt, fontface, scale, CV_RGB(255,0,0), thickness, 8);
-      measured = keypoints[0].pt;
+      return keypoints[0].pt;
+    }
+  }
+
+  void imageCb(const sensor_msgs::ImageConstPtr& msg)
+  {
+    cv_bridge::CvImagePtr cv_ptr;
+    try
+    {
+      cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
+    }
+    catch (cv_bridge::Exception& e)
+    {
+      ROS_ERROR("cv_bridge exception: %s", e.what());
+      return;
     }
 
-    imshow("keypoints", im_with_keypoints ); 
+    // Draw an example circle on the video stream
+    //if (cv_ptr->image.rows > 60 && cv_ptr->image.cols > 60)
+    //  cv::circle(cv_ptr->image, cv::Point(50, 50), 10, CV_RGB(255,0,0));
+    Mat src = cv_ptr->image;
+    cv::flip(src,src,1);
+    measured = circleDetection(src);
+    circle( src, measured, 3, Scalar(0,255,0), -1, 8, 0 );
+    
+
+    imshow("keypoints", src ); 
 
     //SLUT TEST
 

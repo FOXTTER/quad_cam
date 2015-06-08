@@ -35,7 +35,7 @@ int main()
         std::vector<Vec3f> circles;
         
         /// Apply the Hough Transform to find the circles
-        HoughCircles( src_gray, circles, CV_HOUGH_GRADIENT, 1, src_gray.rows/100, 50, 140, 0, 0 );
+        HoughCircles( src_gray, circles, CV_HOUGH_GRADIENT, 1, src_gray.rows/100, 20, 140, 0, 0 );
         
         // std
         //HoughCircles( src_gray, circles, CV_HOUGH_GRADIENT, 1, src_gray.rows/8, 200, 100, 0, 0 );
