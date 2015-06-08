@@ -57,6 +57,10 @@ public:
           Scalar::all(255), thickness, 8);
   }
 
+  //Function stub for the computer vision
+  cv::Point2f getCoordinates(cv:Mat img){
+
+  }
 
   ImageConverter()
     : it_(nh_)
