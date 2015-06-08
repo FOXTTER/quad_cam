@@ -62,8 +62,8 @@ int main()
                 if (sqrt(abs(x-dx)*abs(x-dx) + abs(y-dy)*abs(y-dy)) < 15) {
                     if(abs(cvRound(circles[i][2]-circles[j][2])) > 5 ){
                         numbOfcircles++;
-                        sum_x = circles[i][0];
-                        sum_y = circles[i][1];
+                        sum_x += circles[i][0];
+                        sum_y += circles[i][1];
                     }
                 }
             }

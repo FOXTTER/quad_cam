@@ -2,8 +2,10 @@
 #include <image_transport/image_transport.h>
 #include <cv_bridge/cv_bridge.h>
 #include <sensor_msgs/image_encodings.h>
+#include <std_msgs/Empty.h>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/highgui/highgui.hpp>
+#include <geometry_msgs/Twist.h>
 #include <iostream>
 #include <cv.h>
 #include <highgui.h>
@@ -15,6 +17,11 @@ using namespace std;
 #define IMAGE_PATH "/image_raw" //Webcam
 //Comment to test github
 static const std::string OPENCV_WINDOW = "Image window";
+Point2f measured(0,0);
+geometry_msgs::Twist twist_msg;
+geometry_msgs::Twist twist_msg_hover;
+geometry_msgs::Twist twist_msg_pshover;
+std_msgs::Empty emp_msg;
 
 
 class ImageConverter
@@ -69,7 +76,7 @@ public:
     image_sub_ = it_.subscribe(IMAGE_PATH, 1, 
       &ImageConverter::imageCb, this);
     image_pub_ = it_.advertise("/image_converter/output_video", 1);
-
+  
     //cv::namedWindow(OPENCV_WINDOW);
   }
 
@@ -120,13 +127,13 @@ public:
      
 
     if (keypoints.size() > 0){
-      ROS_INFO("Blob at (%g, %g)", keypoints[0].pt.x-320, keypoints[0].pt.y-240);
       std::stringstream ss;
       ss << "(" <<  (keypoints[0].pt.x-320) << ", " << (keypoints[0].pt.y-240) << ")";
       string tekst = ss.str();
       cv::Size siz = cv::getTextSize(tekst, fontface, scale, thickness, &baseline);
       cv::Point2f pt(keypoints[0].pt.x - (siz.width / 2), keypoints[0].pt.y - siz.height*2);
       cv::putText(im_with_keypoints, tekst, pt, fontface, scale, CV_RGB(255,0,0), thickness, 8);
+      measured = keypoints[0].pt;
     }
 
     imshow("keypoints", im_with_keypoints ); 
@@ -149,6 +156,52 @@ int main(int argc, char** argv)
 {
   ros::init(argc, argv, "image_converter");
   ImageConverter ic;
-  ros::spin();
+  double dt = 0.1;
+  ros::NodeHandle node;
+  ros::Rate r(1/dt); // 10 hz
+  ros::Publisher pub_empty_land;
+	ros::Publisher pub_twist;
+	ros::Publisher pub_empty_takeoff;
+	ros::Publisher pub_empty_reset;
+	//pub_twist = node.advertise<geometry_msgs::Twist>("/cmd_vel", 1); /* Message queue length is just 1 */
+	//pub_empty_takeoff = node.advertise<std_msgs::Empty>("/ardrone/takeoff", 1); /* Message queue length is just 1 */
+	//pub_empty_land = node.advertise<std_msgs::Empty>("/ardrone/land", 1); /* Message queue length is just 1 */
+	//pub_empty_reset = node.advertise<std_msgs::Empty>("/ardrone/reset", 1); /* Message queue length is just 1 */
+
+	twist_msg_hover.linear.x=0.0; 
+	twist_msg_hover.linear.y=0.0;
+	twist_msg_hover.linear.z=0.0;
+	twist_msg_hover.angular.x=0.0; 
+	twist_msg_hover.angular.y=0.0;
+	twist_msg_hover.angular.z=0.0;  
+	double time = (double)ros::Time::now().toSec(); 
+	double previous_errorX = 0;
+	double outputX = 0;
+	double integralX = 0;
+	double derivativeX = 0;
+	double errorX = 0;
+	double previous_errorY = 0;
+	double outputY = 0;
+	double integralY = 0;
+	double derivativeY = 0;
+	double errorY = 0;
+	Point2f target(0,0);
+	double Kp = 1;
+	double Ki = 0;
+	double Kd = 0;
+	while (ros::ok())
+	{
+  	ros::spinOnce();
+  	errorX = target.x - measured.x;
+  	integralX = integralX + errorX * dt;
+  	derivativeX = (errorX-previous_errorX)/dt;
+  	outputX = Kp*errorX + Ki * integralX + Kd * derivativeX;
+  	errorY = target.y - measured.y;
+  	integralY = integralY + errorY * dt;
+  	derivativeY = (errorY-previous_errorY)/dt;
+  	outputY = Kp*errorY + Ki * integralY + Kd * derivativeY;
+  	ROS_INFO("Blob at (%g, %g)", measured.x-320, measured.y-240);
+  	r.sleep();
+	}
   return 0;
 }
