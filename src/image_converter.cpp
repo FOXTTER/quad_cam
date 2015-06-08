@@ -13,7 +13,7 @@ using namespace cv;
 using namespace std;
 //#define IMAGE_PATH "/ardrone/image_raw" //Quadcopter
 #define IMAGE_PATH "/image_raw" //Webcam
-
+//Comment to test github
 static const std::string OPENCV_WINDOW = "Image window";
 
 
