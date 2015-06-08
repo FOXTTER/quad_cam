@@ -1,7 +1,6 @@
 cmake_minimum_required(VERSION 2.8)
-project( Squares )
+project( stars )
 find_package( OpenCV )
 include_directories( ${OpenCV_INCLUDE_DIRS} )
-add_executable( Squares Squares
-.cpp )
-target_link_libraries( Squares ${OpenCV_LIBS} )
+add_executable( stars stars.cpp )
+target_link_libraries( stars ${OpenCV_LIBS} )
