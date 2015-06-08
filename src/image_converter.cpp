@@ -58,8 +58,8 @@ public:
   }
 
   //Function stub for the computer vision
-  cv::Point2f getCoordinates(cv:Mat img){
-
+  cv::Point2f getCoordinates(cv::Mat img){
+  	return Point2f(0,0);
   }
 
   ImageConverter()
@@ -75,7 +75,7 @@ public:
 
   ~ImageConverter()
   {
-    //cv::destroyWindow(OPENCV_WINDOW);
+    //cv::destroyWindow(OPENCV_WINDOW);w
   }
 
   void imageCb(const sensor_msgs::ImageConstPtr& msg)
