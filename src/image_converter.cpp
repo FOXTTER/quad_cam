@@ -175,6 +175,40 @@ public:
     }
   }
 
+  IplImage* hsvFilter( IplImage* img) {
+
+    //HSV image
+    IplImage* imgHSV = cvCreateImage( cvGetSize(img), 8, 3);
+    cvCvtColor( img, imgHSV, CV_BGR2HSV);
+
+    //Create binary image with min/max value
+    IplImage* imgThresh = cvCreateImage( cvGetSize( img ), 8, 1 );
+
+    cvInRangeS (imgHSV, cvScalar( 50 , 80, 0), cvScalar(150, 220, 255), imgThresh );
+
+    //Clean up
+    cvReleaseImage( &imgHSV );  
+    return imgThresh;
+	}
+
+	void erosion(Mat src){
+	    int erosion_type = MORPH_ELLIPSE;
+	    int erosion_size = 20;
+	    Mat element = getStructuringElement( erosion_type,
+	                                   Size( 2*erosion_size + 1, 2*erosion_size+1 ),
+	                                   Point( erosion_size, erosion_size ) );
+	    erode( src, src, element );
+	}
+	
+	void dilation(Mat src){
+	    int dilation_type = MORPH_ELLIPSE;
+	    int dilation_size = 20;
+	    Mat dil_element = getStructuringElement( dilation_type,
+	                                    Size( 2*dilation_size + 1, 2*dilation_size+1 ),
+	                                    Point( dilation_size, dilation_size ) );
+	    dilate(src, src, dil_element );
+	}
+
   void imageCb(const sensor_msgs::ImageConstPtr& msg)
   {
     cv_bridge::CvImagePtr cv_ptr;
@@ -191,12 +225,17 @@ public:
     // Draw an example circle on the video stream
     //if (cv_ptr->image.rows > 60 && cv_ptr->image.cols > 60)
     //  cv::circle(cv_ptr->image, cv::Point(50, 50), 10, CV_RGB(255,0,0));
-    Mat src = cv_ptr->image;
-    cv::flip(src,src,1);
-    measured = circleDetection(src);
+    IplImage* img = new IplImage(cv_ptr->image);
+    Mat org = cvarrToMat(img).clone();
+    IplImage* foo = hsvFilter(img);
+    Mat src = cvarrToMat(foo);
+    //erosion(src);
+    //dilation(src);
+    //cv::flip(src,src,1);
+    measured = blobDetection(src);
     circle( src, measured, 3, Scalar(0,255,0), -1, 8, 0 );
     
-
+    imshow("Original", org );
     imshow("keypoints", src ); 
 
     //SLUT TEST
@@ -215,7 +254,7 @@ public:
 
 //Husk at dobbelttjek disse værdier
 double lambdaX = 17.5; //Grader
-double lambdaY = 22.5 //Grader
+double lambdaY = 22.5; //Grader
 double pixelDistX = 72; //Pixels
 double pixelDistY = 88; //Pixels
 

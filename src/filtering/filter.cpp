@@ -25,6 +25,27 @@ IplImage* hsvFilter( IplImage* img) {
     return imgThresh;
 }
 
+
+void erosion(Mat src){
+    int erosion_type = MORPH_ELLIPSE;
+    int erosion_size = 20;
+    Mat element = getStructuringElement( erosion_type,
+                                   Size( 2*erosion_size + 1, 2*erosion_size+1 ),
+                                   Point( erosion_size, erosion_size ) );
+    erode( src, src, element );
+}
+
+void dilation(Mat src){
+    int dilation_type = MORPH_ELLIPSE;
+    int dilation_size = 20;
+    Mat dil_element = getStructuringElement( dilation_type,
+                                    Size( 2*dilation_size + 1, 2*dilation_size+1 ),
+                                    Point( dilation_size, dilation_size ) );
+    dilate( src, src, dil_element );
+
+}
+
+
 int main()
 {
         //Create window
@@ -34,28 +55,10 @@ int main()
     while(1){ //Create infinte loop for live streaming
         
         frame = cvQueryFrame(capture);
-        int erosion_type = MORPH_ELLIPSE;
-
-        int erosion_size = 20;
         IplImage* imgThresh = hsvFilter(frame);
-        Mat element = getStructuringElement( erosion_type,
-                                       Size( 2*erosion_size + 1, 2*erosion_size+1 ),
-                                       Point( erosion_size, erosion_size ) );
         Mat test = cvarrToMat(imgThresh);
-        Mat prev = test.clone();
-        erode( test, test, element );
-        int dilation_type = MORPH_ELLIPSE;
-        int dilation_size = 20;
-        Mat dil_element = getStructuringElement( dilation_type,
-                                        Size( 2*dilation_size + 1, 2*dilation_size+1 ),
-                                        Point( dilation_size, dilation_size ) );
-        dilate( test, test, dil_element );
-        
-        /// Show your results
-        namedWindow("original", CV_WINDOW_AUTOSIZE);
-        imshow( "original", cvarrToMat(frame) );
-        namedWindow("Video", CV_WINDOW_AUTOSIZE);
-        imshow( "Video", prev );
+        erosion(test);
+        dilation(test);
         namedWindow("Filtered", CV_WINDOW_AUTOSIZE);
         imshow( "Filtered", test);
         
