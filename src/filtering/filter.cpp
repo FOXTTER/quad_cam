@@ -8,17 +8,32 @@
 using namespace cv;
 using namespace std;
 char key;
+enum color_type {
+    red,
+    blue
+};
 
-IplImage* hsvFilter( IplImage* img) {
+IplImage* hsvFilter( IplImage* img, color_type color) {
 
     //HSV image
     IplImage* imgHSV = cvCreateImage( cvGetSize(img), 8, 3);
     cvCvtColor( img, imgHSV, CV_BGR2HSV);
 
+
+
     //Create binary image with min/max value
     IplImage* imgThresh = cvCreateImage( cvGetSize( img ), 8, 1 );
 
-    cvInRangeS (imgHSV, cvScalar( 50 , 80, 0), cvScalar(150, 220, 255), imgThresh );
+    switch(color) {
+        case red:
+            cvInRangeS (imgHSV, cvScalar( 0 , 130, 0), cvScalar(30, 190, 255), imgThresh );
+            break;
+        case blue:
+            cvInRangeS (imgHSV, cvScalar( 50 , 80, 0), cvScalar(150, 220, 255), imgThresh );
+            break;
+        default:
+            cvInRangeS (imgHSV, cvScalar( 50 , 80, 0), cvScalar(150, 220, 255), imgThresh );
+    }
 
     //Clean up
     cvReleaseImage( &imgHSV );  
@@ -55,7 +70,7 @@ int main()
     while(1){ //Create infinte loop for live streaming
         
         frame = cvQueryFrame(capture);
-        IplImage* imgThresh = hsvFilter(frame);
+        IplImage* imgThresh = hsvFilter(frame, blue);
         Mat test = cvarrToMat(imgThresh);
         erosion(test);
         dilation(test);
