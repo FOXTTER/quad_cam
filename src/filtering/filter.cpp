@@ -26,7 +26,7 @@ IplImage* hsvFilter( IplImage* img, color_type color) {
 
     switch(color) {
         case red:
-            cvInRangeS (imgHSV, cvScalar( 0 , 130, 0), cvScalar(30, 190, 255), imgThresh );
+            cvInRangeS (imgHSV, cvScalar( 150 , 100, 0), cvScalar(180, 200, 255), imgThresh );
             break;
         case blue:
             cvInRangeS (imgHSV, cvScalar( 50 , 80, 0), cvScalar(150, 220, 255), imgThresh );
@@ -43,7 +43,7 @@ IplImage* hsvFilter( IplImage* img, color_type color) {
 
 void erosion(Mat src){
     int erosion_type = MORPH_ELLIPSE;
-    int erosion_size = 20;
+    int erosion_size = 10;
     Mat element = getStructuringElement( erosion_type,
                                    Size( 2*erosion_size + 1, 2*erosion_size+1 ),
                                    Point( erosion_size, erosion_size ) );
@@ -52,7 +52,7 @@ void erosion(Mat src){
 
 void dilation(Mat src){
     int dilation_type = MORPH_ELLIPSE;
-    int dilation_size = 20;
+    int dilation_size = 10;
     Mat dil_element = getStructuringElement( dilation_type,
                                     Size( 2*dilation_size + 1, 2*dilation_size+1 ),
                                     Point( dilation_size, dilation_size ) );
@@ -70,8 +70,9 @@ int main()
     while(1){ //Create infinte loop for live streaming
         
         frame = cvQueryFrame(capture);
-        IplImage* imgThresh = hsvFilter(frame, blue);
+        IplImage* imgThresh = hsvFilter(frame, red);
         Mat test = cvarrToMat(imgThresh);
+        cv::flip(test,test,1);
         erosion(test);
         dilation(test);
         namedWindow("Filtered", CV_WINDOW_AUTOSIZE);
