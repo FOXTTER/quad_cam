@@ -18,7 +18,7 @@ IplImage* hsvFilter( IplImage* img) {
     //Create binary image with min/max value
     IplImage* imgThresh = cvCreateImage( cvGetSize( img ), 8, 1 );
 
-    cvInRangeS (imgHSV, cvScalar( 104, 178, 70), cvScalar(130, 240, 124), imgThresh );
+    cvInRangeS (imgHSV, cvScalar( 90 , 125, 100), cvScalar(120, 185, 160), imgThresh );
 
     //Clean up
     cvReleaseImage( &imgHSV );  
@@ -39,8 +39,8 @@ int main()
             
         
         /// Show your results
-        namedWindow("Video", CV_WINDOW_AUTOSIZE);
-        imshow( "Video", cvarrToMat(frame) );
+        //namedWindow("Video", CV_WINDOW_AUTOSIZE);
+        //imshow( "Video", cvarrToMat(frame) );
         namedWindow("Filtered", CV_WINDOW_AUTOSIZE);
         imshow( "Filtered", cvarrToMat(imgThresh));
         
