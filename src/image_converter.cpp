@@ -213,6 +213,19 @@ public:
   }
 };
 
+//Husk at dobbelttjek disse værdier
+double lambdaX = 17.5; //Grader
+double lambdaY = 22.5 //Grader
+double pixelDistX = 72; //Pixels
+double pixelDistY = 88; //Pixels
+
+double getErrorX(int pixErrorX){
+	double alphaX = 0; // SKAL HENTES FRA QUADCOPTEREN
+	double betaX = atan(tan(lambdaX/2)*(pixErrorX)/pixelDistX);
+	double height = 0; //HØJDEMÅLING FRA ULTRALYD
+	return height * tan(alphaX+betaX);
+}
+
 int main(int argc, char** argv)
 {
   ros::init(argc, argv, "image_converter");

@@ -39,8 +39,8 @@ int main()
             
         
         /// Show your results
-        namedWindow("Video", CV_WINDOW_AUTOSIZE);
-        imshow( "Video", cvarrToMat(frame) );
+        //namedWindow("Video", CV_WINDOW_AUTOSIZE);
+        //imshow( "Video", cvarrToMat(frame) );
         namedWindow("Filtered", CV_WINDOW_AUTOSIZE);
         imshow( "Filtered", cvarrToMat(imgThresh));
         
