@@ -150,7 +150,10 @@ public:
     int baseline = 0;
 
    // Set up the detector with default parameters.
-    SimpleBlobDetector detector;
+    cv::SimpleBlobDetector::Params params;
+    params.filterByColor = true;
+    params.blobColor = 255;
+    SimpleBlobDetector detector(params);
          
     // Detect blobs.
     std::vector<KeyPoint> keypoints;
@@ -227,9 +230,9 @@ public:
     //  cv::circle(cv_ptr->image, cv::Point(50, 50), 10, CV_RGB(255,0,0));
     IplImage* img = new IplImage(cv_ptr->image);
     Mat org = cvarrToMat(img).clone();
-    IplImage* foo = hsvFilter(img);
-    Mat src = cvarrToMat(foo);
-    //erosion(src);
+    img = hsvFilter(img);
+    Mat src = cvarrToMat(img);
+    erosion(src);
     //dilation(src);
     //cv::flip(src,src,1);
     measured = blobDetection(src);
