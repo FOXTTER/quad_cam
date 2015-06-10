@@ -18,12 +18,37 @@ using namespace cv;
 using namespace std;
 #define IMAGE_PATH "/ardrone/image_raw" //Quadcopter
 //#define IMAGE_PATH "/image_raw" //Webcam
+#define X 0
+#define Y 1
+#define ROT 2
+#define Z 3
+
+//Values for HSV filter
+#define BLUE_HUE_LOW 25 
+#define BLUE_HUE_HIGH 134
+#define BLUE_SAT_LOW 71
+#define BLUE_SAT_HIGH 255
+#define BLUE_VAL_LOW 64
+#define BLUE_VAL_HIGH 255
+#define RED_HUE_LOW 144
+#define RED_HUE_HIGH 184 
+#define RED_SAT_LOW 71
+#define RED_SAT_HIGH 255
+#define RED_VAL_LOW 64
+#define RED_VAL_HIGH 255
+
 static const std::string OPENCV_WINDOW = "Image window";
 double  measured[4] = {};
 geometry_msgs::Twist twist_msg;
 geometry_msgs::Twist twist_msg_hover;
 geometry_msgs::Twist twist_msg_pshover;
 std_msgs::Empty emp_msg;
+ardrone_autonomy::Navdata msg_in_global;
+	//Husk at dobbelttjek disse værdier
+	double gammaX = 17.5; //Grader
+	double gammaY = 22.5; //Grader
+	double pixelDistX = 72; //Pixels
+	double pixelDistY = 88; //Pixels
 
 
 class ImageConverter
@@ -122,11 +147,21 @@ public:
       cv::putText(im_with_keypoints, tekst, pt, fontface, scale, CV_RGB(255,0,0), thickness, 8);
       return keypoints[0].pt;
     }
+    return Point(-1,-1);
   }
   enum color_type {
     red,
     blue
 	};
+
+	double getAngle(Point2f blue, Point2f red) {
+  int kateteA = red.y - blue.y;
+  int kateteB = red.x - blue.x;
+
+  return atan2(kateteA, kateteB);
+	}
+
+
   IplImage* hsvFilter( IplImage* img, color_type color) {
 
     //HSV image
@@ -140,10 +175,17 @@ public:
 
     switch(color) {
         case red:
-            cvInRangeS (imgHSV, cvScalar( 130 , 100, 0), cvScalar(180, 255, 255), imgThresh );
+            cvInRangeS (imgHSV, cvScalar( RED_HUE_LOW , RED_SAT_LOW, RED_VAL_LOW), cvScalar(RED_HUE_HIGH, RED_SAT_HIGH, RED_VAL_HIGH), imgThresh );
+            //Hvis den er i det røde skal vi wrappe den
+            if(RED_HUE_HIGH > 180){
+    					IplImage* temp = cvCreateImage( cvGetSize( img ), 8, 1 );
+    					cvInRangeS (imgHSV, cvScalar( 0 , RED_SAT_LOW, RED_VAL_LOW), cvScalar(RED_HUE_HIGH-180, RED_SAT_HIGH, RED_VAL_HIGH), temp );
+    					cvAdd(imgThresh,temp,imgThresh);
+    					cvReleaseImage( &temp );
+    				}
             break;
         case blue:
-            cvInRangeS (imgHSV, cvScalar( 50 , 100, 0), cvScalar(150, 255, 255), imgThresh );
+            cvInRangeS (imgHSV, cvScalar( BLUE_HUE_LOW , BLUE_SAT_LOW, BLUE_VAL_LOW), cvScalar(BLUE_HUE_HIGH, BLUE_SAT_HIGH, BLUE_VAL_HIGH), imgThresh );
             break;
         default:
             cvInRangeS (imgHSV, cvScalar( 50 , 80, 0), cvScalar(150, 220, 255), imgThresh );
@@ -169,6 +211,28 @@ public:
 	                                    Point( dilation_size, dilation_size ) );
 	    dilate(src, src, dil_element );
 	}
+	
+	double getPosX(int pixErrorX){
+		if (pixErrorX == -320)
+		{
+			return 0;
+		}
+		double alphaX = ((msg_in_global.rotX*3.14)/180); // SKAL HENTES FRA QUADCOPTEREN
+		double betaX = atan(tan(gammaX/2)*(pixErrorX)/pixelDistX);
+		double height = 1; //HØJDEMÅLING FRA ULTRALYD
+		return height * tan(alphaX+betaX);
+	}
+	double getPosY(int pixErrorY){
+		if (pixErrorY == -240)
+		{
+			return 0;
+		}
+		double alphaY = ((msg_in_global.rotY*3.14)/180); // SKAL HENTES FRA QUADCOPTEREN
+		double betaY = atan(tan(gammaX/2)*(pixErrorY)/pixelDistY);
+		double height = 1; //HØJDEMÅLING FRA ULTRALYD
+		return height * tan(alphaY+betaY);
+	}
+
   void imageCb(const sensor_msgs::ImageConstPtr& msg)
   {
     cv_bridge::CvImagePtr cv_ptr;
@@ -190,28 +254,30 @@ public:
     Mat blueMat = cvarrToMat(hsvFilter(img,blue));
     Mat redMat  = cvarrToMat(hsvFilter(img,red));
     Mat src = cvarrToMat(img);
-    dilation(blueMat,5);
-    dilation(redMat,5);
-    erosion(blueMat,20);
-    //dilation(blueMat,10);
-    erosion(redMat,20);
-    //dilation(redMat,10);
+    erosion(blueMat,5);
+    dilation(blueMat,0);
+    erosion(redMat,7);
+    dilation(redMat,0);
     Point2f blaa = blobDetection(blueMat);
     Point2f roed = blobDetection(redMat);
-    measured[0] = (blaa.x+roed.x)/2;
-    measured[1] = (blaa.y+roed.y)/2;
-    measured[2] = getAngle(blaa, roed);
+    if (blaa.x == -1 || roed.x == -1)
+    {
+    	measured[X] = 0;
+    	measured[Y] = 0;
+    }else{
+    	measured[X] = getPosX(((blaa.x+roed.x)/2)-320);
+    	measured[Y] = getPosY(((blaa.y+roed.y)/2)-240);
+    }
+    measured[ROT] = getAngle(blaa, roed);
 
     
     Mat test = redMat + blueMat;
     cvtColor(test,test,COLOR_GRAY2RGB);
-    circle( test, Point2f measuredXY(measured[0],measured[1]), 10, Scalar(0,255,0), -1, 8, 0 );
-    flip(test,test,1);
-    flip(org,org,1);
+    circle( test, Point2f((blaa.x+roed.x)/2,(blaa.y+roed.y)/2), 10, Scalar(0,255,0), -1, 8, 0 );
 
 
-    imshow("Red", redMat );
-    imshow("Blue", blueMat ); 
+    //imshow("Red", redMat );
+    //imshow("Blue", blueMat ); 
     imshow("test", test);
     imshow("Original",org);
 
@@ -229,31 +295,11 @@ public:
   }
 };
 
-//Husk at dobbelttjek disse værdier
-double gammaX = 17.5; //Grader
-double gammaY = 22.5; //Grader
-double pixelDistX = 72; //Pixels
-double pixelDistY = 88; //Pixels
 
-double getErrorX(int pixErrorX){
-	double alphaX = 0; // SKAL HENTES FRA QUADCOPTEREN
-	double betaX = atan(tan(gammaX/2)*(pixErrorX)/pixelDistX);
-	double height = 0; //HØJDEMÅLING FRA ULTRALYD
-	return height * tan(alphaX+betaX);
-}
-
-ardrone_autonomy::Navdata msg_in_global;
-double rotY = 0;
 void nav_callback(const ardrone_autonomy::Navdata& msg_in)
 {
 		//Take in state of ardrone	
 		msg_in_global = msg_in;
-}
-double getAngle(Point2f blue, Point2f red) {
-  int kateteA = red.y - blue.y;
-  int kateteB = red.x - blue.x;
-
-  return atan2(kateteA, kateteB);
 }
 
 int main(int argc, char** argv)
@@ -288,28 +334,44 @@ int main(int argc, char** argv)
   double integral[4] = {};
   double target[4] = {};
 
-	double Kp = 1;
-	double Ki = 0;
-	double Kd = 0;
+	double Kp[4] = {0.1,0.1,1/6.28,0};
+	double Ki[4] = {};
+	double Kd[4] = {};
 	double time_start=(double)ros::Time::now().toSec();
-	while (ros::ok() && ((double)ros::Time::now().toSec()< time_start+1.0 || msg_in_global.state == 0)) {
+	while (ros::ok() && ((double)ros::Time::now().toSec()< time_start+1.0));
+	if (msg_in_global.state == 0) {
 		ros::spinOnce();
   	pub_empty_reset.publish(emp_msg);
 	}
 	pub_empty_takeoff.publish(emp_msg);
-	while (ros::ok() && (double)ros::Time::now().toSec()< time_start+10)
+	time_start=(double)ros::Time::now().toSec();
+	while (ros::ok() && ((double)ros::Time::now().toSec()< time_start+2.0));
+	while (ros::ok() && ((double)ros::Time::now().toSec()< time_start+10) && msg_in_global.altd < 1500)
 	{
   	ros::spinOnce();
-  	ROS_INFO("Angle y: %g",msg_in_global.rotY);
+  	//ROS_INFO("Angle y: %g",msg_in_global.rotY);
     for(int i = 0; i < 4; i++) {
       error[i] = target[i] - measured[i];
       integral[i] = integral[i] + error[i] * dt;
       derivative[i] = (error[i]-previous_error[i])/dt;
-      output[i] = Kp*error[i] + Ki * integral[i] + Kd * derivative[i];
+      output[i] = Kp[i]*error[i] + Ki[i] * integral[i] + Kd[i] * derivative[i];
       previous_error[i] = error[i];
     }
-  	
-  	ROS_INFO("Blob at (%g, %g)", measured[0]-320, measured[1]-240);
+    twist_msg.angular.z=output[ROT];
+    twist_msg.linear.x = output[X];
+    twist_msg.linear.y = output[Y];
+
+    pub_twist.publish(twist_msg);
+  	//ROS_INFO("Blob at (%g, %g)", measured[0]-320, measured[1]-240);
+  	//ROS_INFO("Angle: %g", measured[ROT]);
+  	ROS_INFO("Measured pos = (%g,%g)",measured[X],measured[Y]);
+  	ROS_INFO("Output x: %g", output[X]);
+  	ROS_INFO("Output y: %g", output[Y]);
+  	ROS_INFO("Output rot: %g", output[ROT]);
+  	char key = cvWaitKey(10);     //Capture Keyboard stroke
+    if (char(key) == 27){
+        break;      //If you hit ESC key loop will break.
+    }
   	r.sleep();
 	}
 	pub_empty_land.publish(emp_msg);
