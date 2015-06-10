@@ -199,6 +199,8 @@ public:
     Point2f roed = blobDetection(redMat);
     measured[0] = (blaa.x+roed.x)/2;
     measured[1] = (blaa.y+roed.y)/2;
+    measured[2] = getAngle(blaa, roed);
+
     
     Mat test = redMat + blueMat;
     cvtColor(test,test,COLOR_GRAY2RGB);
