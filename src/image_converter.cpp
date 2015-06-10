@@ -13,9 +13,8 @@
 #include <string>
 using namespace cv;
 using namespace std;
-//#define IMAGE_PATH "/ardrone/image_raw" //Quadcopter
-#define IMAGE_PATH "/image_raw" //Webcam
-//Comment to test github
+#define IMAGE_PATH "/ardrone/image_raw" //Quadcopter
+//#define IMAGE_PATH "/image_raw" //Webcam
 static const std::string OPENCV_WINDOW = "Image window";
 Point2f measured(0,0);
 geometry_msgs::Twist twist_msg;
@@ -177,41 +176,52 @@ public:
       return keypoints[0].pt;
     }
   }
-
-  IplImage* hsvFilter( IplImage* img) {
+  enum color_type {
+    red,
+    blue
+	};
+  IplImage* hsvFilter( IplImage* img, color_type color) {
 
     //HSV image
     IplImage* imgHSV = cvCreateImage( cvGetSize(img), 8, 3);
     cvCvtColor( img, imgHSV, CV_BGR2HSV);
 
+
+
     //Create binary image with min/max value
     IplImage* imgThresh = cvCreateImage( cvGetSize( img ), 8, 1 );
 
-    cvInRangeS (imgHSV, cvScalar( 50 , 80, 0), cvScalar(150, 220, 255), imgThresh );
+    switch(color) {
+        case red:
+            cvInRangeS (imgHSV, cvScalar( 130 , 100, 0), cvScalar(180, 255, 255), imgThresh );
+            break;
+        case blue:
+            cvInRangeS (imgHSV, cvScalar( 50 , 100, 0), cvScalar(150, 255, 255), imgThresh );
+            break;
+        default:
+            cvInRangeS (imgHSV, cvScalar( 50 , 80, 0), cvScalar(150, 220, 255), imgThresh );
+    }
 
     //Clean up
     cvReleaseImage( &imgHSV );  
     return imgThresh;
-	}
+}
 
-	void erosion(Mat src){
+	void erosion(Mat src, int erosion_size){
 	    int erosion_type = MORPH_ELLIPSE;
-	    int erosion_size = 20;
 	    Mat element = getStructuringElement( erosion_type,
 	                                   Size( 2*erosion_size + 1, 2*erosion_size+1 ),
 	                                   Point( erosion_size, erosion_size ) );
 	    erode( src, src, element );
 	}
 	
-	void dilation(Mat src){
+	void dilation(Mat src, int dilation_size){
 	    int dilation_type = MORPH_ELLIPSE;
-	    int dilation_size = 20;
 	    Mat dil_element = getStructuringElement( dilation_type,
 	                                    Size( 2*dilation_size + 1, 2*dilation_size+1 ),
 	                                    Point( dilation_size, dilation_size ) );
 	    dilate(src, src, dil_element );
 	}
-
   void imageCb(const sensor_msgs::ImageConstPtr& msg)
   {
     cv_bridge::CvImagePtr cv_ptr;
@@ -230,16 +240,31 @@ public:
     //  cv::circle(cv_ptr->image, cv::Point(50, 50), 10, CV_RGB(255,0,0));
     IplImage* img = new IplImage(cv_ptr->image);
     Mat org = cvarrToMat(img).clone();
-    img = hsvFilter(img);
+    Mat blueMat = cvarrToMat(hsvFilter(img,blue));
+    Mat redMat  = cvarrToMat(hsvFilter(img,red));
     Mat src = cvarrToMat(img);
-    erosion(src);
-    //dilation(src);
-    //cv::flip(src,src,1);
-    measured = blobDetection(src);
-    circle( src, measured, 3, Scalar(0,255,0), -1, 8, 0 );
+    dilation(blueMat,5);
+    dilation(redMat,5);
+    erosion(blueMat,20);
+    //dilation(blueMat,10);
+    erosion(redMat,20);
+    //dilation(redMat,10);
+    Point2f blaa = blobDetection(blueMat);
+    Point2f roed = blobDetection(redMat);
+    measured.x = (blaa.x+roed.x)/2;
+    measured.y = (blaa.y+roed.y)/2;
     
-    imshow("Original", org );
-    imshow("keypoints", src ); 
+    Mat test = redMat + blueMat;
+    cvtColor(test,test,COLOR_GRAY2RGB);
+    circle( test, measured, 10, Scalar(0,255,0), -1, 8, 0 );
+    flip(test,test,1);
+    flip(org,org,1);
+
+
+    imshow("Red", redMat );
+    imshow("Blue", blueMat ); 
+    imshow("test", test);
+    imshow("Original",org);
 
     //SLUT TEST
 
@@ -289,7 +314,7 @@ int main(int argc, char** argv)
 	twist_msg_hover.linear.z=0.0;
 	twist_msg_hover.angular.x=0.0; 
 	twist_msg_hover.angular.y=0.0;
-	twist_msg_hover.angular.z=0.0;  
+	twist_msg_hover.angular.z=0.0;
 	double time = (double)ros::Time::now().toSec(); 
 	double previous_errorX = 0;
 	double outputX = 0;

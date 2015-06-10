@@ -12,6 +12,9 @@ enum color_type {
     red,
     blue
 };
+const int alpha_slider_max = 140;
+int alpha_slider;
+double alpha;
 
 IplImage* hsvFilter( IplImage* img, color_type color) {
 
@@ -26,7 +29,7 @@ IplImage* hsvFilter( IplImage* img, color_type color) {
 
     switch(color) {
         case red:
-            cvInRangeS (imgHSV, cvScalar( 150 , 100, 0), cvScalar(180, 200, 255), imgThresh );
+            cvInRangeS (imgHSV, cvScalar( alpha_slider , 100, 0), cvScalar(alpha_slider+40, 200, 255), imgThresh );
             break;
         case blue:
             cvInRangeS (imgHSV, cvScalar( 50 , 80, 0), cvScalar(150, 220, 255), imgThresh );
@@ -40,6 +43,11 @@ IplImage* hsvFilter( IplImage* img, color_type color) {
     return imgThresh;
 }
 
+
+void on_trackbar( int, void* )
+{
+ alpha = (double) alpha_slider;
+}
 
 void erosion(Mat src){
     int erosion_type = MORPH_ELLIPSE;
@@ -67,16 +75,19 @@ int main()
     
     CvCapture* capture = cvCaptureFromCAM(CV_CAP_ANY);  //Capture using any camera connected to your system
     IplImage* frame = 0;
+    alpha_slider = 0;
+    namedWindow("Filtered", CV_WINDOW_AUTOSIZE);
+    createTrackbar( "TrackbarName", "Linear Blend", &alpha_slider, alpha_slider_max, on_trackbar );
+    on_trackbar( alpha_slider, 0 );
     while(1){ //Create infinte loop for live streaming
-        
+        on_trackbar( alpha_slider, 0 );
         frame = cvQueryFrame(capture);
         IplImage* imgThresh = hsvFilter(frame, red);
         Mat test = cvarrToMat(imgThresh);
         cv::flip(test,test,1);
         erosion(test);
         dilation(test);
-        namedWindow("Filtered", CV_WINDOW_AUTOSIZE);
-        imshow( "Filtered", test);
+        imshow("Filtered", test);
         
         key = cvWaitKey(10);     //Capture Keyboard stroke
         if (char(key) == 27){
