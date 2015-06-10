@@ -54,12 +54,6 @@ IplImage* hsvFilter( IplImage* img, color_type color) {
     return imgThresh;
 }
 
-
-void on_trackbar( int, void* )
-{
- alpha = (double) alpha_slider;
-}
-
 void erosion(Mat src){
     int erosion_type = MORPH_ELLIPSE;
     int erosion_size = 10;
