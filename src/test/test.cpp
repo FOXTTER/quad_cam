@@ -113,10 +113,6 @@ int main( int argc, char** argv )
  /// Create Windows
  namedWindow("Linear Blend", 1);
 
- /// Create Trackbars
- char TrackbarName[50];
- sprintf( TrackbarName, "Hue min %d", hue_slider_max );
-
  createTrackbar( "Hue min: ", "Linear Blend", &hue_min_slider, hue_slider_max, on_trackbar1 );
  createTrackbar( "Hue max: ", "Linear Blend", &hue_max_slider, hue_slider_max, on_trackbar2 );
  createTrackbar( "Sat min: ", "Linear Blend", &sat_min_slider, sat_slider_max, on_trackbar3 );
@@ -130,7 +126,7 @@ int main( int argc, char** argv )
  while(1){
  	src1 = cvarrToMat(cvQueryFrame(capture));
  	IplImage* foo = new IplImage(src1);
- 	imshow("org",src1);
+ 	imshowc("org",src1);
  	foo = hsvFilter(foo);
  	dst = cvarrToMat(foo);
  	dilation(dst,dil_slider);
