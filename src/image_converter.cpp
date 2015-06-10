@@ -293,6 +293,14 @@ double getErrorX(int pixErrorX){
 	return height * tan(alphaX+betaX);
 }
 
+ardrone_autonomy::Navdata msg_in;
+double rotY = 0;
+void nav_callback(const ardrone_autonomy::Navdata& msg_in)
+{
+		//Take in state of ardrone	
+		roty = msg_in.rotY;
+}
+
 int main(int argc, char** argv)
 {
   ros::init(argc, argv, "image_converter");
@@ -304,6 +312,8 @@ int main(int argc, char** argv)
 	ros::Publisher pub_twist;
 	ros::Publisher pub_empty_takeoff;
 	ros::Publisher pub_empty_reset;
+	ros::Subscriber nav_sub;
+	nav_sub = node.subscribe("/ardrone/navdata", 1, nav_callback);
 	//pub_twist = node.advertise<geometry_msgs::Twist>("/cmd_vel", 1); /* Message queue length is just 1 */
 	//pub_empty_takeoff = node.advertise<std_msgs::Empty>("/ardrone/takeoff", 1); /* Message queue length is just 1 */
 	//pub_empty_land = node.advertise<std_msgs::Empty>("/ardrone/land", 1); /* Message queue length is just 1 */
