@@ -11,6 +11,8 @@
 #include <highgui.h>
 #include <stdio.h>
 #include <string>
+#include <math.h>
+
 using namespace cv;
 using namespace std;
 #define IMAGE_PATH "/ardrone/image_raw" //Quadcopter
@@ -291,6 +293,13 @@ double getErrorX(int pixErrorX){
 	double betaX = atan(tan(lambdaX/2)*(pixErrorX)/pixelDistX);
 	double height = 0; //HØJDEMÅLING FRA ULTRALYD
 	return height * tan(alphaX+betaX);
+}
+
+double getAngle(Point2f blue, Point2f red) {
+  int kateteA = red.y - blue.y;
+  int kateteB = red.x - blue.x;
+
+  return atan2(kateteA, kateteB);
 }
 
 int main(int argc, char** argv)
