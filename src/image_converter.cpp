@@ -84,62 +84,6 @@ public:
     //cv::destroyWindow(OPENCV_WINDOW);w
   }
 
-  Point circleDetection(Mat src){
-  	Mat src_gray;
- 		// Convert it to gray
-  	cvtColor( src, src_gray, CV_BGR2GRAY );
-  	
-  	/// Reduce the noise so we avoid false circle detection
-  	GaussianBlur( src_gray, src_gray, Size(9, 9), 2, 2 );
-  	
-  	std::vector<Vec3f> circles;
-  	
-  	/// Apply the Hough Transform to find the circles
-  	HoughCircles( src_gray, circles, CV_HOUGH_GRADIENT, 1, src_gray.rows/100, 20, 140, 0, 0 );
-  	
-  	// std
-  	//HoughCircles( src_gray, circles, CV_HOUGH_GRADIENT, 1, src_gray.rows/8, 200, 100, 0, 0 );
-  	
-  	/// Draw the circles detected
-  	int sum_x = 0;
-  	int sum_y = 0;
-  	int numbOfcircles = 0;
-  	
-  	for( size_t i = 0; i < circles.size(); i++ )
-  	{
-  	    //Point center(cvRound(circles[i][0]), cvRound(circles[i][1]));
-  	    int radius = cvRound(circles[i][2]);
-  	    
-  	    for(int j = 0; j < circles.size();j++) {
-  	        if (j==i){
-  	            continue;
-  	        }
-  	        int x = circles[i][0];
-  	        int dx = circles[j][0];
-  	        int y = circles[i][1];
-  	        int dy = circles[j][1];
-  	        
-  	        if (sqrt(abs(x-dx)*abs(x-dx) + abs(y-dy)*abs(y-dy)) < 15) {
-  	            if(abs(cvRound(circles[i][2]-circles[j][2])) > 5 ){
-  	                numbOfcircles++;
-  	                sum_x += circles[i][0];
-  	                sum_y += circles[i][1];
-  	            }
-  	        }
-  	    }
-  	    // draw circles (average)
-  	    if (numbOfcircles > 0) {
-  	        // circle center
-  	        Point center(sum_x/numbOfcircles, sum_y/numbOfcircles);
-  	        //circle( src, center, 3, Scalar(0,255,0), -1, 8, 0 );
-  	        // circle outline
-  	        // circle( src, center, radius, Scalar(0,0,255), 3, 8, 0 );
-  	        return center;
-  	    }
-  	    
-  	}		
-  }
-
   Point blobDetection(Mat src){
   	Mat src_gray;
   	//TEST AF BLOB DETECTION
