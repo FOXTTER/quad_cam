@@ -3,6 +3,7 @@
 #include <cv_bridge/cv_bridge.h>
 #include <sensor_msgs/image_encodings.h>
 #include <std_msgs/Empty.h>
+#include <ardrone_autonomy/Navdata.h>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <geometry_msgs/Twist.h>
@@ -239,12 +240,12 @@ double getErrorX(int pixErrorX){
 	return height * tan(alphaX+betaX);
 }
 
-ardrone_autonomy::Navdata msg_in;
+ardrone_autonomy::Navdata msg_in_global;
 double rotY = 0;
 void nav_callback(const ardrone_autonomy::Navdata& msg_in)
 {
 		//Take in state of ardrone	
-		roty = msg_in.rotY;
+		msg_in_global = msg_in;
 }
 double getAngle(Point2f blue, Point2f red) {
   int kateteA = red.y - blue.y;
@@ -266,11 +267,10 @@ int main(int argc, char** argv)
 	ros::Publisher pub_empty_reset;
 	ros::Subscriber nav_sub;
 	nav_sub = node.subscribe("/ardrone/navdata", 1, nav_callback);
-	//pub_twist = node.advertise<geometry_msgs::Twist>("/cmd_vel", 1); /* Message queue length is just 1 */
-	//pub_empty_takeoff = node.advertise<std_msgs::Empty>("/ardrone/takeoff", 1); /* Message queue length is just 1 */
-	//pub_empty_land = node.advertise<std_msgs::Empty>("/ardrone/land", 1); /* Message queue length is just 1 */
-	//pub_empty_reset = node.advertise<std_msgs::Empty>("/ardrone/reset", 1); /* Message queue length is just 1 */
-
+	pub_twist = node.advertise<geometry_msgs::Twist>("/cmd_vel", 1); /* Message queue length is just 1 */
+	pub_empty_takeoff = node.advertise<std_msgs::Empty>("/ardrone/takeoff", 1); /* Message queue length is just 1 */
+	pub_empty_land = node.advertise<std_msgs::Empty>("/ardrone/land", 1); /* Message queue length is just 1 */
+	pub_empty_reset = node.advertise<std_msgs::Empty>("/ardrone/reset", 1); /* Message queue length is just 1 */
 	twist_msg_hover.linear.x=0.0; 
 	twist_msg_hover.linear.y=0.0;
 	twist_msg_hover.linear.z=0.0;
@@ -292,8 +292,15 @@ int main(int argc, char** argv)
 	double Kp = 1;
 	double Ki = 0;
 	double Kd = 0;
-	while (ros::ok())
+	double time_start=(double)ros::Time::now().toSec();
+	while (ros::ok() && ((double)ros::Time::now().toSec()< time_start+1.0 || msg_in_global.state == 0)) {
+		ros::spinOnce();
+  	pub_empty_reset.publish(emp_msg);
+	}
+	pub_empty_takeoff.publish(emp_msg);
+	while (ros::ok() && (double)ros::Time::now().toSec()< time_start+10)
 	{
+
   	ros::spinOnce();
   	errorX = target.x - measured.x;
   	integralX = integralX + errorX * dt;
@@ -303,8 +310,10 @@ int main(int argc, char** argv)
   	integralY = integralY + errorY * dt;
   	derivativeY = (errorY-previous_errorY)/dt;
   	outputY = Kp*errorY + Ki * integralY + Kd * derivativeY;
-  	ROS_INFO("Blob at (%g, %g)", measured.x-320, measured.y-240);
+  	//ROS_INFO("Blob at (%g, %g)", measured.x-320, measured.y-240);
+  	ROS_INFO("Angle y: %g",msg_in_global.rotY);
   	r.sleep();
 	}
+	pub_empty_land.publish(emp_msg);
   return 0;
 }
