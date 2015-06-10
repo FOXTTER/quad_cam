@@ -11,6 +11,8 @@
 #include <highgui.h>
 #include <stdio.h>
 #include <string>
+#include <math.h>
+
 using namespace cv;
 using namespace std;
 #define IMAGE_PATH "/ardrone/image_raw" //Quadcopter
@@ -243,6 +245,12 @@ void nav_callback(const ardrone_autonomy::Navdata& msg_in)
 {
 		//Take in state of ardrone	
 		roty = msg_in.rotY;
+}
+double getAngle(Point2f blue, Point2f red) {
+  int kateteA = red.y - blue.y;
+  int kateteB = red.x - blue.x;
+
+  return atan2(kateteA, kateteB);
 }
 
 int main(int argc, char** argv)
