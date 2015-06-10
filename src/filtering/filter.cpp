@@ -12,6 +12,19 @@ enum color_type {
     red,
     blue
 };
+const int alpha_slider_max = 100;
+int alpha_slider;
+double alpha;
+double beta;
+Mat test;
+
+void on_trackbar( int, void* )
+{
+ alpha = (double) alpha_slider/alpha_slider_max ;
+ beta = ( 1.0 - alpha );
+
+ imshow( "Filtered", test);
+}
 
 IplImage* hsvFilter( IplImage* img, color_type color) {
 
@@ -71,12 +84,14 @@ int main()
         
         frame = cvQueryFrame(capture);
         IplImage* imgThresh = hsvFilter(frame, red);
-        Mat test = cvarrToMat(imgThresh);
+        test = cvarrToMat(imgThresh);
         cv::flip(test,test,1);
         erosion(test);
         dilation(test);
         namedWindow("Filtered", CV_WINDOW_AUTOSIZE);
-        imshow( "Filtered", test);
+
+        createTrackbar( "TrackbarName", "Linear Blend", &alpha_slider, alpha_slider_max, on_trackbar );
+        on_trackbar( alpha_slider, 0 );
         
         key = cvWaitKey(10);     //Capture Keyboard stroke
         if (char(key) == 27){
