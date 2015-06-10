@@ -18,7 +18,7 @@ using namespace std;
 #define IMAGE_PATH "/ardrone/image_raw" //Quadcopter
 //#define IMAGE_PATH "/image_raw" //Webcam
 static const std::string OPENCV_WINDOW = "Image window";
-Point2f measured(0,0);
+double  measured[4] = {};
 geometry_msgs::Twist twist_msg;
 geometry_msgs::Twist twist_msg_hover;
 geometry_msgs::Twist twist_msg_pshover;
@@ -197,12 +197,12 @@ public:
     //dilation(redMat,10);
     Point2f blaa = blobDetection(blueMat);
     Point2f roed = blobDetection(redMat);
-    measured.x = (blaa.x+roed.x)/2;
-    measured.y = (blaa.y+roed.y)/2;
+    measured[0] = (blaa.x+roed.x)/2;
+    measured[1] = (blaa.y+roed.y)/2;
     
     Mat test = redMat + blueMat;
     cvtColor(test,test,COLOR_GRAY2RGB);
-    circle( test, measured, 10, Scalar(0,255,0), -1, 8, 0 );
+    circle( test, Point2f measuredXY(measured[0],measured[1]), 10, Scalar(0,255,0), -1, 8, 0 );
     flip(test,test,1);
     flip(org,org,1);
 
@@ -227,14 +227,14 @@ public:
 };
 
 //Husk at dobbelttjek disse værdier
-double lambdaX = 17.5; //Grader
-double lambdaY = 22.5; //Grader
+double gammaX = 17.5; //Grader
+double gammaY = 22.5; //Grader
 double pixelDistX = 72; //Pixels
 double pixelDistY = 88; //Pixels
 
 double getErrorX(int pixErrorX){
 	double alphaX = 0; // SKAL HENTES FRA QUADCOPTEREN
-	double betaX = atan(tan(lambdaX/2)*(pixErrorX)/pixelDistX);
+	double betaX = atan(tan(gammaX/2)*(pixErrorX)/pixelDistX);
 	double height = 0; //HØJDEMÅLING FRA ULTRALYD
 	return height * tan(alphaX+betaX);
 }
@@ -278,32 +278,30 @@ int main(int argc, char** argv)
 	twist_msg_hover.angular.y=0.0;
 	twist_msg_hover.angular.z=0.0;
 	double time = (double)ros::Time::now().toSec(); 
-	double previous_errorX = 0;
-	double outputX = 0;
-	double integralX = 0;
-	double derivativeX = 0;
-	double errorX = 0;
-	double previous_errorY = 0;
-	double outputY = 0;
-	double integralY = 0;
-	double derivativeY = 0;
-	double errorY = 0;
-	Point2f target(0,0);
+	
+  double previous_error[4] = {};
+  double error[4] = {};
+  double output[4] = {};
+  double derivative[4] = {};
+  double integral[4] = {};
+  double target[4] = {};
+
 	double Kp = 1;
 	double Ki = 0;
 	double Kd = 0;
 	while (ros::ok())
 	{
   	ros::spinOnce();
-  	errorX = target.x - measured.x;
-  	integralX = integralX + errorX * dt;
-  	derivativeX = (errorX-previous_errorX)/dt;
-  	outputX = Kp*errorX + Ki * integralX + Kd * derivativeX;
-  	errorY = target.y - measured.y;
-  	integralY = integralY + errorY * dt;
-  	derivativeY = (errorY-previous_errorY)/dt;
-  	outputY = Kp*errorY + Ki * integralY + Kd * derivativeY;
-  	ROS_INFO("Blob at (%g, %g)", measured.x-320, measured.y-240);
+
+    for(int i = 0; i < 4; i++) {
+      error[i] = target[i] - measured[i];
+      integral[i] = integral[i] + error[i] * dt;
+      derivative[i] = (error[i]-previous_error[i])/dt;
+      output[i] = Kp*error[i] + Ki * integral[i] + Kd * derivative[i];
+      previous_error[i] = error[i];
+    }
+  	
+  	ROS_INFO("Blob at (%g, %g)", measured[0]-320, measured[1]-240);
   	r.sleep();
 	}
   return 0;
