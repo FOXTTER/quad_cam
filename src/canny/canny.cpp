@@ -34,7 +34,7 @@ void CannyThreshold(int, void*)
     blur( src_gray, detected_edges, Size(3,3) );
     
     /// Canny detector
-    Canny( detected_edges, detected_edges, lowThreshold, lowThreshold, kernel_size );
+    Canny( detected_edges, detected_edges, lowThreshold, lowThreshold* ratio, kernel_size );
     
     /// Using Canny's output as a mask, we display our result
     dst = Scalar::all(0);
