@@ -24,18 +24,18 @@ using namespace std;
 #define Z 3
 
 //Values for HSV filter
-#define BLUE_HUE_LOW 25 
-#define BLUE_HUE_HIGH 134
-#define BLUE_SAT_LOW 71
+#define BLUE_HUE_LOW 83 
+#define BLUE_HUE_HIGH 126
+#define BLUE_SAT_LOW 60
 #define BLUE_SAT_HIGH 255
-#define BLUE_VAL_LOW 64
-#define BLUE_VAL_HIGH 255
+#define BLUE_VAL_LOW 57
+#define BLUE_VAL_HIGH 117
 #define RED_HUE_LOW 144
-#define RED_HUE_HIGH 184 
+#define RED_HUE_HIGH 187 
 #define RED_SAT_LOW 71
-#define RED_SAT_HIGH 255
+#define RED_SAT_HIGH 243
 #define RED_VAL_LOW 64
-#define RED_VAL_HIGH 255
+#define RED_VAL_HIGH 208
 
 static const std::string OPENCV_WINDOW = "Image window";
 double  measured[4] = {};
@@ -45,10 +45,10 @@ geometry_msgs::Twist twist_msg_pshover;
 std_msgs::Empty emp_msg;
 ardrone_autonomy::Navdata msg_in_global;
 	//Husk at dobbelttjek disse værdier
-	double gammaX = 17.5; //Grader
-	double gammaY = 22.5; //Grader
-	double pixelDistX = 72; //Pixels
-	double pixelDistY = 88; //Pixels
+	double gammaX = 40; //Grader
+	double gammaY = 64; //Grader
+	double pixelDistX = 180; //Pixels
+	double pixelDistY = 320; //Pixels
 
 
 class ImageConverter
@@ -122,8 +122,36 @@ public:
 
    // Set up the detector with default parameters.
     cv::SimpleBlobDetector::Params params;
+    // foelgende fra DroneLander
+    params.thresholdStep = 10;
+    params.minThreshold = 60;
+    params.maxThreshold = 300;
+    params.minRepeatability = 1;
+    params.minDistBetweenBlobs = 100;
     params.filterByColor = true;
     params.blobColor = 255;
+    params.filterByArea = true;
+    params.minArea = 10;
+    params.maxArea = 10000;
+    params.filterByCircularity = 0;
+    params.minCircularity = 8.0000001192092896e-001;
+    params.maxCircularity = 3.4028234663852886e+038;
+    params.filterByInertia = true;
+    params.minInertiaRatio = 1.0000000149011612e-001;
+    params.maxInertiaRatio = 3.4028234663852886e+038;
+    params.filterByConvexity = true;
+    params.minConvexity = 0.5;
+    params.maxConvexity = 1.5;
+    // vores oårindelige parameter 
+    /*
+    params.filterByArea =true;
+    params.maxArea = 50000;
+    params.minArea = 1000;
+    params.filterByColor = true;
+    params.filterByCircularity = false;
+    params.blobColor = 255;
+    params.filterByConvexity = true;
+    */
     SimpleBlobDetector detector(params);
          
     // Detect blobs.
@@ -155,10 +183,10 @@ public:
 	};
 
 	double getAngle(Point2f blue, Point2f red) {
-  int kateteA = red.y - blue.y;
-  int kateteB = red.x - blue.x;
+	  int kateteA = red.y - blue.y;
+	  int kateteB = red.x - blue.x;
 
-  return atan2(kateteA, kateteB);
+	  return atan2(kateteA, kateteB);
 	}
 
 
@@ -213,23 +241,15 @@ public:
 	}
 	
 	double getPosX(int pixErrorX){
-		if (pixErrorX == -320)
-		{
-			return 0;
-		}
-		double alphaX = ((msg_in_global.rotX*3.14)/180); // SKAL HENTES FRA QUADCOPTEREN
-		double betaX = atan(tan(gammaX/2)*(pixErrorX)/pixelDistX);
-		double height = 1; //HØJDEMÅLING FRA ULTRALYD
+		double alphaX = ((msg_in_global.rotY*3.14)/180); // SKAL HENTES FRA QUADCOPTEREN
+		double betaX = -atan(tan(gammaX/2)*(pixErrorX)/pixelDistX);
+		double height = 1;//;msg_in_global.altd/1000; //HØJDEMÅLING FRA ULTRALYD
 		return height * tan(alphaX+betaX);
 	}
 	double getPosY(int pixErrorY){
-		if (pixErrorY == -240)
-		{
-			return 0;
-		}
-		double alphaY = ((msg_in_global.rotY*3.14)/180); // SKAL HENTES FRA QUADCOPTEREN
-		double betaY = atan(tan(gammaX/2)*(pixErrorY)/pixelDistY);
-		double height = 1; //HØJDEMÅLING FRA ULTRALYD
+		double alphaY = ((msg_in_global.rotX*3.14)/180); // SKAL HENTES FRA QUADCOPTEREN
+		double betaY = -atan(tan(gammaY/2)*(pixErrorY)/pixelDistY);
+		double height = 1;//msg_in_global.altd/1000; //HØJDEMÅLING FRA ULTRALYD
 		return height * tan(alphaY+betaY);
 	}
 
@@ -260,20 +280,26 @@ public:
     dilation(redMat,0);
     Point2f blaa = blobDetection(blueMat);
     Point2f roed = blobDetection(redMat);
+    Mat test = redMat + blueMat;
+    cvtColor(test,test,COLOR_GRAY2RGB);
+    circle( test, Point2f(320,180), 10, Scalar(255,0,0), -1, 8, 0 );
     if (blaa.x == -1 || roed.x == -1)
     {
-    	measured[X] = 0;
-    	measured[Y] = 0;
+    	//measured[X] = 0;
+    	//measured[Y] = 0;
+    	
     }else{
-    	measured[X] = getPosX(((blaa.x+roed.x)/2)-320);
-    	measured[Y] = getPosY(((blaa.y+roed.y)/2)-240);
+    	measured[X] = getPosX(((blaa.y+roed.y)/2)-180);
+    	measured[Y] = getPosY(((blaa.x+roed.x)/2)-320);
+    	circle( test, Point2f((blaa.x+roed.x)/2,(blaa.y+roed.y)/2), 10, Scalar(0,255,0), -1, 8, 0 );
     }
     measured[ROT] = getAngle(blaa, roed);
 
     
-    Mat test = redMat + blueMat;
-    cvtColor(test,test,COLOR_GRAY2RGB);
-    circle( test, Point2f((blaa.x+roed.x)/2,(blaa.y+roed.y)/2), 10, Scalar(0,255,0), -1, 8, 0 );
+    
+    
+    //circle( test, Point2f(measured[X]+320,measured[Y]+240), 10, Scalar(0,255,0), -1, 8, 0 );
+
 
 
     //imshow("Red", redMat );
@@ -341,15 +367,16 @@ int main(int argc, char** argv)
 	while (ros::ok() && ((double)ros::Time::now().toSec()< time_start+1.0));
 	if (msg_in_global.state == 0) {
 		ros::spinOnce();
-  	pub_empty_reset.publish(emp_msg);
+  	//pub_empty_reset.publish(emp_msg);
 	}
-	pub_empty_takeoff.publish(emp_msg);
+	//pub_empty_takeoff.publish(emp_msg);
+	//pub_twist.publish(twist_msg_hover);
 	time_start=(double)ros::Time::now().toSec();
-	while (ros::ok() && ((double)ros::Time::now().toSec()< time_start+2.0));
-	while (ros::ok() && ((double)ros::Time::now().toSec()< time_start+10) && msg_in_global.altd < 1500)
+	while (ros::ok() && ((double)ros::Time::now().toSec()< time_start+5.0));
+	while (ros::ok() || ((double)ros::Time::now().toSec()< time_start+20) && msg_in_global.altd < 1500)
 	{
   	ros::spinOnce();
-  	//ROS_INFO("Angle y: %g",msg_in_global.rotY);
+  	ROS_INFO("Angle y: %g",msg_in_global.rotY);
     for(int i = 0; i < 4; i++) {
       error[i] = target[i] - measured[i];
       integral[i] = integral[i] + error[i] * dt;
@@ -357,14 +384,15 @@ int main(int argc, char** argv)
       output[i] = Kp[i]*error[i] + Ki[i] * integral[i] + Kd[i] * derivative[i];
       previous_error[i] = error[i];
     }
-    twist_msg.angular.z=output[ROT];
+    twist_msg.angular.z= output[ROT];
     twist_msg.linear.x = output[X];
     twist_msg.linear.y = output[Y];
 
-    pub_twist.publish(twist_msg);
+    //pub_twist.publish(twist_msg);
   	//ROS_INFO("Blob at (%g, %g)", measured[0]-320, measured[1]-240);
   	//ROS_INFO("Angle: %g", measured[ROT]);
   	ROS_INFO("Measured pos = (%g,%g)",measured[X],measured[Y]);
+  	ROS_INFO("Measured rot = %g", measured[ROT]);
   	ROS_INFO("Output x: %g", output[X]);
   	ROS_INFO("Output y: %g", output[Y]);
   	ROS_INFO("Output rot: %g", output[ROT]);
