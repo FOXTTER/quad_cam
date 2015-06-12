@@ -1,1 +1,0 @@
-/Users/testpro/Downloads/quadcopter/canny/CMakeFiles/canny.dir
