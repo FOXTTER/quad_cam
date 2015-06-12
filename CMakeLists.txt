@@ -52,6 +52,7 @@ include_directories(
 ## Declare a cpp executable
 add_executable(image_converter src/image_converter.cpp)
 add_executable(hsv_cal src/test.cpp)
+add_executable(canny src/canny.cpp)
 
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
@@ -62,6 +63,9 @@ add_executable(hsv_cal src/test.cpp)
    ${catkin_LIBRARIES}
  )
 target_link_libraries(hsv_cal
+   ${catkin_LIBRARIES}
+ )
+target_link_libraries(canny
    ${catkin_LIBRARIES}
  )
 
@@ -79,6 +83,11 @@ install(TARGETS image_converter image_converter
    RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
  )
  install(TARGETS hsv_cal hsv_cal
+   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+#   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+ )
+ install(TARGETS canny canny
    ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 #   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
    RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
