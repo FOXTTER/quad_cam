@@ -363,7 +363,7 @@ int main(int argc, char** argv)
 	double Kp[4] = {0.1,0.1,1/6.28,0};
 	double Ki[4] = {};
 	double Kd[4] = {};
-	double time_start=(double)ros::Time::now().toSec();
+	double time_start = (double)ros::Time::now().toSec();
 	while (ros::ok() && ((double)ros::Time::now().toSec()< time_start+1.0));
 	if (msg_in_global.state == 0) {
 		ros::spinOnce();
